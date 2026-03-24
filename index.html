@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ADMIRA AR — Face Scanner</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap"></noscript>
+  <link rel="stylesheet" href="style.css"/>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.1.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="scanline"></div>
+
+  <header class="hud-header">
+    <div class="hud-logo">
+      <span class="logo-bracket">[</span><span class="logo-text">ADMIRA</span><span class="logo-bracket">]</span>
+      <span class="logo-sub">THREAT SCANNER v5.0</span>
+    </div>
+    <div class="hud-status">
+      <div class="status-item"><span class="status-dot" id="camDot"></span><span id="camLabel">CAM: OFFLINE</span></div>
+      <div class="status-item"><span class="status-dot" id="modelDot"></span><span id="modelLabel">MODEL: LOADING</span></div>
+      <div class="status-item"><span class="status-dot" id="gestureHudDot"></span><span id="gestureHudLabel">GESTURE: ---</span></div>
+      <div class="status-item"><span class="status-dot active"></span><span id="fpsLabel">FPS: --</span></div>
+    </div>
+  </header>
+
+  <main class="viewport-container">
+    <div class="loading-screen" id="loadingScreen">
+      <div class="loading-inner">
+        <div class="loading-spinner">
+          <svg viewBox="0 0 100 100" class="spinner-svg"><circle cx="50" cy="50" r="40" class="spinner-ring"/></svg>
+          <div class="loading-icon">⚙</div>
+        </div>
+        <div class="loading-title">ADMIRA SYSTEM</div>
+        <div class="loading-status" id="loadingStatus">Inicializando...</div>
+        <div class="loading-bar-container"><div class="loading-bar" id="loadingBar"></div></div>
+      </div>
+    </div>
+
+    <div class="ar-wrapper" id="arWrapper" style="display:none">
+      <video id="videoEl" autoplay playsinline muted></video>
+      <canvas id="glCanvas"></canvas>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+
+      <div class="live-stats">
+        <div class="stat-row"><span class="stat-label">FPS</span><span class="stat-val" id="statFps">--</span></div>
+        <div class="stat-row"><span class="stat-label">LATENCY</span><span class="stat-val" id="latencyVal">--ms</span></div>
+        <div class="stat-row"><span class="stat-label">FACES</span><span class="stat-val" id="facesVal">0</span></div>
+        <div class="stat-row"><span class="stat-label">CONFIANZA</span>
+          <div class="stat-bar"><div class="stat-fill" id="confidenceFill"></div></div>
+          <span class="stat-val" id="confidenceVal">0%</span>
+        </div>
+      </div>
+
+      <div class="instructions-panel">
+        <div class="inst-matrix" id="instMatrix"></div>
+        <div class="inst-content">
+          <div class="inst-cam-row">
+            <svg class="inst-cam-svg" viewBox="0 0 56 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="10" width="52" height="32" rx="5" stroke="currentColor" stroke-width="2.2" fill="rgba(255,255,255,0.04)"/>
+              <rect x="5" y="13" width="46" height="26" rx="3" stroke="currentColor" stroke-width="0.8" stroke-opacity="0.25" fill="none"/>
+              <circle cx="28" cy="27" r="11" stroke="currentColor" stroke-width="2.2" fill="none"/>
+              <circle cx="28" cy="27" r="7.5" stroke="currentColor" stroke-width="1.5" stroke-opacity="0.7" fill="none"/>
+              <circle cx="28" cy="27" r="4" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.5" fill="none"/>
+              <circle cx="28" cy="27" r="2" fill="currentColor" opacity="0.9"/>
+              <path d="M18 10 L18 5 Q18 3 20 3 L28 3 Q30 3 30 5 L30 10" stroke="currentColor" stroke-width="2" fill="rgba(255,255,255,0.04)"/>
+              <rect x="42" y="14" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.5" fill="rgba(255,255,255,0.08)"/>
+              <circle cx="9" cy="15" r="3" stroke="currentColor" stroke-width="1.5" fill="rgba(255,255,255,0.06)"/>
+              <rect x="37" y="22" width="10" height="3" rx="1" fill="currentColor" opacity="0.2"/>
+            </svg>
+            <div>
+              <div class="inst-cam-title">GESTURE PHOTO<span class="inst-cam-title-es">Foto automática por gesto</span></div>
+            </div>
+          </div>
+          <div class="inst-steps">
+            <div class="inst-step-row"><div class="inst-line"><span class="inst-en">1. OPEN PALM</span><br><span class="inst-es">Muestra la mano abierta</span></div></div>
+            <div class="inst-sep">── ── ── ── ──</div>
+            <div class="inst-step-row"><div class="inst-line"><span class="inst-en">2. CLOSE FIST</span><br><span class="inst-es">Cierra el puño</span></div></div>
+            <div class="inst-sep">── ── ── ── ──</div>
+            <div class="inst-step-row"><div class="inst-line"><span class="inst-en">3. 5s COUNTDOWN</span><br><span class="inst-es">Cuenta atrás → foto</span></div></div>
+          </div>
+          <div class="inst-gesture-row">
+            <span class="g-dot" id="gestureDot"></span>
+            <span class="inst-status" id="gestureStateLabel">ESPERANDO GESTO</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="countdown-overlay" id="countdownOverlay" style="display:none">
+        <div class="countdown-bg"></div>
+        <div class="countdown-number" id="countdownNumber">5</div>
+        <div class="countdown-label">CAPTURING IN</div>
+      </div>
+    </div>
+  </main>
+
+  <div class="qr-overlay" id="qrOverlay">
+    <div class="qr-panel">
+      <div class="qr-big-id" id="qrBigId">◈ PHOTO: --</div>
+      <div class="qr-title">◈ PHOTO CAPTURED</div>
+      <div class="qr-subtitle">Scan QR to view your photo</div>
+      <div class="qr-code-box" id="qrCode"></div>
+      <div class="qr-url" id="qrUrl"></div>
+      <div class="qr-timer-row"><span class="qr-timer-label">CLOSES IN</span><span class="qr-timer" id="qrTimer">30s</span></div>
+      <button class="qr-close" id="qrCloseBtn">CERRAR ✕</button>
+    </div>
+  </div>
+
+  <div id="miniQrContainer" class="mini-qr-container"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

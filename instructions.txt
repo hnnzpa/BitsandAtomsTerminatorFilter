@@ -1,0 +1,42 @@
+=========================================================
+MANUAL DE INSTALACIÓN Y REPARACIÓN - ADMIRA AR GESTURES
+(VERSIÓN WEBSOCKETS - PRODUCCIÓN)
+=========================================================
+
+Fase 1: Instalación desde cero (El camino seguro)
+---------------------------------------------------------
+1. Abre la consola en la carpeta del proyecto.
+2. Comprueba que tienes Python 3.11 instalado:
+   python --version
+3. Crea el entorno virtual forzando la versión 3.11
+   py -3.11 -m venv venv
+4. Activa el entorno virtual:
+   source venv\Scripts\activate -Win | source venv/Scripts/activate -Lin
+5. Instala las librerías blindadas:
+   pip install --no-cache-dir -r requirements.txt
+6. Ejecuta el programa:
+   python gestor.py
+7. (NUEVO): Python te pedirá permiso en el Firewall de Windows para abrir el puerto 8765. Dale a "Permitir redes privadas".
+
+Fase 2: Resolución de Problemas (Troubleshooting)
+---------------------------------------------------------
+
+ERROR 1: Python detecta el gesto, pero la web no hace fotos.
+Causa: La comunicación interna (WebSocket) está bloqueada.
+Solución:
+1. Abre la consola de Chrome (F12) con la web abierta.
+2. Si ves un error rojo diciendo "WebSocket connection to 'ws://localhost:8765' failed", significa que Python no está abierto, o el Firewall lo está bloqueando.
+3. Asegúrate de tener `gestor.py` corriendo ANTES o DURANTE la apertura de la web.
+
+ERROR 2: Falta el "(venv)" en la consola o moviste la carpeta de sitio.
+Causa: El entorno virtual usa rutas absolutas. Si cambias la carpeta de sitio, se corrompe.
+Solución:
+1. Cierra la consola.
+2. Borra manualmente la carpeta "venv" desde el explorador de Windows.
+3. Vuelve a ejecutar los pasos de la "Fase 1".
+
+ERROR 3: "AttributeError: module 'mediapipe' has no attribute 'solutions'"
+Causa: Se ha colado una versión de Numpy (2.x) o MediaPipe (0.10.33+) modernas.
+Solución (con el venv activado):
+1. pip uninstall opencv-python opencv-contrib-python mediapipe numpy -y
+2. pip install -r requirements.txt
